@@ -1,0 +1,77 @@
+http://blog.csdn.net/yangzhawen/article/details/50457922
+
+yum -y install cmake gcc gcc-c++ libaio libaio-devel automake autoconf bzr bison libtool  zlib-devel libgcrypt-devel  libcurl-devel  crypt*  libgcrypt* python-sphinx openssl   imake libxml2-devel expat-devel   ncurses5-devel ncurses-devle   vim-common  libgpg-error-devel   libidn-devel
+
+yum -y install perl-DBI  
+yum -y install perl-DBD-MySQL  
+yum -y install  perl-Time-HiRes  
+yum -y install perl-IO-Socket-SSL 
+
+
+mkdir -p /usr/local/xtrabackup
+tar xvzf percona-xtrabackup-2.4.4.tar.gz -C /usr/local/xtrabackup/ && cd /usr/local/xtrabackup/percona-xtrabackup-2.4.4
+chown -R  mysql:mysql /usr/local/xtrabackup
+cd /usr/local/xtrabackup/percona-xtrabackup-2.4.4/
+cmake -DBUILD_CONFIG=xtrabackup_release -DWITH_MAN_PAGES=OFF
+make j8
+make install
+
+ln -sf   /usr/local/xtrabackup/bin/innobackupex  /usr/bin/  
+ln -sf   /usr/local/xtrabackup/bin/xtrabackup  /usr/bin/
+
+#备份
+innobackupex --socket=/usr/local/var/mysql2/mysql2.sock --user=root --password --defaults-file=/etc/mysqld_multi.cnf --parallel=4 --database=passport /tmp/backup
+#保持事务一致性
+innobackupex --socket=/usr/local/var/mysql2/mysql2.sock --user=root --password --defaults-file=/etc/mysqld_multi.cnf --database=passport --apply-log /tmp/backup/2015-08-05_16-08-14
+#传输
+scp -r /tmp/backup/2015-08-05_16-08-14 10.10.16.24:/tmp/backup/ 
+#恢复
+innobackupex --socket=/tmp/mysql.sock --user=root --password --defaults-file=/app/local/mysql/my.cnf --copy-back /tmp/backup/2015-08-05_16-08-14/
+#还原权限
+chown -R mysql:mysql /app/data/mysql/data
+service mysqld start
+/app/local/mysql/scripts/mysql_install_db --basedir=/app/local/mysql --datadir=/app/data/mysql/data --no-defaults --skip-name-resolve --user=mysql
+
+
+#主库授权同步帐号
+SELECT DISTINCT CONCAT('User: ''',user,'''@''',host,''';') AS query FROM mysql.user;
+GRANT REPLICATION SLAVE ON *.* TO 'slave_passport'@'10.10.16.24' IDENTIFIED BY 'slave_passport';
+FLUSH PRIVILEGES;
+
+#从库开启同步
+cat /tmp/backup/2015-08-05_16-08-14/xtrabackup_binlog_info 
+mysql-bin.002599    804497686
+
+CHANGE MASTER TO
+MASTER_HOST='10.10.16.51',
+MASTER_USER='slave_passport',
+MASTER_PASSWORD='slave_passport',
+MASTER_PORT=3307,
+MASTER_LOG_FILE='mysql-bin.002599',
+MASTER_LOG_POS=804497686;
+
+#开启主从同步
+start slave;
+#查看从库状态
+show slave status\ G
+#从库的检查参数
+Slave_IO_Running=Yes
+Slave_SQL_Running=Yes
+
+#主库的检查参数
+show master status \G
+
++------------------+-----------+--------------+------------------+
+| File             | Position  | Binlog_Do_DB | Binlog_Ignore_DB |
++------------------+-----------+--------------+------------------+
+| mysql-bin.002600 | 454769337 |              |                  |
++------------------+-----------+--------------+------------------+
+1 row in set (0.00 sec)
+
+
+show processlist;
+
+Master has sent all binlog to slave; waiting for binlog to be updated
+
+
+
