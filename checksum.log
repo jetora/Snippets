@@ -1,0 +1,12 @@
+
+yum install -y perl-TermReadKey.x86_64 perl-ExtUtils-MakeMaker.x86_64 perl-DBD-MySQL.x86_64 perl-Time-HiRes.x86_64 && tar -xf /root/percona-toolkit-2.2.19.tar.gz &&cd /root/percona-toolkit-2.2.19 &&perl Makefile.PL &&make && make install && echo installOK
+
+pt-table-checksum --nocheck-binlog-format --nocheck-plan --nocheck-replication-filters --set-vars innodb_lock_wait_timeout=120 --databases jdorders_4 -uroot -p -h10.0.56.87 -P4306 -S /usr/local/percona-server-5.6.32-78.1/mysql.sock
+
+pt-table-sync --user=root --ask-pass --sync-to-master h=172.20.167.160,P=3358 --replicate=percona.checksums --databases=ofw_20,ofw_21,ofw_22,ofw_23  -S /export/data/mysql/tmp/mysql.sock --charset=utf8 --print
+
+
+查看差异（Slave库运行）
+
+select * from percona.checksums where master_cnt <> this_cnt OR master_crc <> this_crc OR ISNULL(master_crc) <> ISNULL(this_crc) ;
+SELECT db, tbl, SUM(this_cnt) AS total_rows, COUNT(*) AS chunks FROM percona.checksums WHERE ( master_cnt <> this_cnt OR master_crc <> this_crc OR ISNULL(master_crc) <> ISNULL(this_crc)) GROUP BY db, tbl;
