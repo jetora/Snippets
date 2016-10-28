@@ -1,0 +1,15 @@
+update 忘加where条件误操作恢复数据(binglog格式必须是ROW)
+mysqlbinlog --no-defaults -v -v --base64-output=DECODE-ROWS mysql-bin.000024 | grep -B 15 'zhuhai'
+mysqlbinlog --no-defaults -v -v --base64-output=DECODE-ROWS mysql-bin.000024 | sed -n '/# at 1679/,/COMMIT/p' > t1.txt 
+sed '/WHERE/{:a;N;/SET/!ba;s/\([^\n]*\)\n\(.*\)\n\(.*\)/\3\n\2\n\1/}' t1.txt | sed -r '/WHERE/{:a;N;/@4/!ba;s/###   @2.*//g}' | sed 's/### //g;s/\/\*.*/,/g' | sed '/WHERE/{:a;N;/@1/!ba;s/,/;/g};s/#.*//g;s/COMMIT,//g' | sed '/^$/d' > recover.sql
+sed -i 's/@1/id/g;s/@2/name/g;s/@3/sex/g;s/@4/address/g' recover.sql
+sed -i -r 's/(address=.*),/\1/g' recover.sql
+
+delete 忘加where条件误删除恢复(binglog格式必须是ROW)
+mysqlbinlog --no-defaults --base64-output=decode-rows -v -v mysql-bin.000024 | sed -n '/### DELETE FROM db01.t1/,/COMMIT/p' > delete.txt
+cat delete.txt | sed -n '/###/p' | sed 's/### //g;s/\/\*.*/,/g;s/DELETE FROM/INSERT INTO/g;s/WHERE/SELECT/g;' | sed -r 's/(@4.*),/\1;/g' | sed 's/@[1-9]=//g' > t1.sql
+
+针对binlog MIXED格式对表的增删改统计分析
+mysqlbinlog --no-defaults --base64-output=decode-rows -vv mysql-bin.009260 | awk '/UPDATE|INSERT|DELETE/{gsub("###","");gsub("INSERT.*INTO","INSERT");gsub("DELETE.*FROM","DELETE");count[$1" "$2]++}END{for(i in count)print i,"\t",count[i]}' |sort -k3nr|head -n 10
+针对binlog ROW格式对表的增删改统计分析
+mysqlbinlog --no-defaults --base64-output=decode-rows -v -v mysql-bin.009260 | awk '/###/{if($0~/UPDATE/INSERT/DELETE/)count[$2" "$NF]++}END{for(i in count)print i,"\t",count[i]}'|column -t|sort -k3nr
