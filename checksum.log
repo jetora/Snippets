@@ -10,3 +10,13 @@ pt-table-sync --user=root --ask-pass --sync-to-master h=172.20.167.160,P=3358 --
 
 select * from percona.checksums where master_cnt <> this_cnt OR master_crc <> this_crc OR ISNULL(master_crc) <> ISNULL(this_crc) ;
 SELECT db, tbl, SUM(this_cnt) AS total_rows, COUNT(*) AS chunks FROM percona.checksums WHERE ( master_cnt <> this_cnt OR master_crc <> this_crc OR ISNULL(master_crc) <> ISNULL(this_crc)) GROUP BY db, tbl;
+
+
+
+GRANT UPDATE,INSERT,DELETE,SELECT, PROCESS, SUPER, REPLICATION SLAVE ON *.* TO'checksums'@'10.0.56.87' identified by 'rootpass';
+GRANT ALL ON percona.* TO 'checksums'@'10.0.56.87' IDENTIFIED BY 'rootpass';
+
+pt-table-checksum h=10.0.56.87,u='checksums',p='rootpass',P=4306 -d jdorders_4  --nocheck-replication-filters --chunk-size-limit=130000 --max-lag=5 --recursion-method=processlist   --recurse=1 --no-check-plan --no-check-binlog-format 
+
+这里纠正一个认识，网上很多人说 pt-table-checksum 要在主库上执行，其实不是的，我的mysql实例比较多，只需在某一台服务器上安装percona-toolkit，这台服务能够同时访问主库和从库就行了，只需修改 -h 指定的ip即可
+pt-table-sync --user=checksums --ask-pass --sync-to-master h=10.0.56.87,P=5306 --replicate=percona.checksums --databases=jdorders_4 -S /usr/local/percona-server-5.6.32-78.1/mysql5306.sock --charset=utf8 --print
