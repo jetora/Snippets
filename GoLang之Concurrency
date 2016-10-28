@@ -1,0 +1,109 @@
+goroutine非并发安全性问题
+
+需要加一把锁以保证每个routine在售票的时候数据同步。
+
+例:
+package main  
+  
+import (  
+    "fmt"  
+    "time"  
+    "math/rand"  
+    "runtime"  
+    "sync"  
+)  
+  
+var total_tickets int32 = 10  
+var mutex = &sync.Mutex{}  
+  
+func sell_tickets(i int) {  
+  
+    for total_tickets > 0 {  
+  
+        mutex.Lock()  
+        // 如果有票就卖  
+        if total_tickets > 0 {  
+            time.Sleep(time.Duration(rand.Intn(5)) * time.Millisecond)  
+            // 卖一张票  
+            total_tickets--  
+            fmt.Println("id:", i, " ticket:", total_tickets)  
+        }  
+        mutex.Unlock()  
+    }  
+}  
+  
+func main() {  
+  
+    // 设置真正意义上的并发  
+    runtime.GOMAXPROCS(4)  
+  
+    // 生成随机种子  
+    rand.Seed(time.Now().Unix())  
+  
+    // 并发5个goroutine来卖票  
+    for i := 0; i < 5; i++ {  
+        go sell_tickets(i)  
+    }  
+  
+    // 等待线程执行完  
+    var input string  
+    fmt.Scanln(&input)  
+    // 退出时打印还有多少票  
+    fmt.Println(total_tickets, "done")  
+}  
+/* 
+output: 
+ 
+id: 0  ticket: 9 
+id: 0  ticket: 8 
+id: 0  ticket: 7 
+id: 0  ticket: 6 
+id: 0  ticket: 5 
+id: 0  ticket: 4 
+id: 0  ticket: 3 
+id: 0  ticket: 2 
+id: 0  ticket: 1 
+id: 0  ticket: 0 
+ 
+0 done 
+*/  
+
+并发情况下的原子操作问题
+go语言也支持原子操作。关于原子操作可以参考耗子叔叔这篇文章《无锁队列的实现》，里面说到了一些CAS – CompareAndSwap的操作。下面的程序有10个goroutine，每个会对cnt变量累加20次，所以，最后的cnt应该是200。如果没有atomic的原子操作，那么cnt将有可能得到一个小于200的数。下面使用了atomic操作，所以是安全的。
+
+例:
+package main  
+  
+import (  
+    "fmt"  
+    "sync/atomic"  
+    "time"  
+)  
+  
+func main() {  
+  
+    var cnt uint32 = 0  
+  
+    // 启动10个goroutine  
+    for i := 0; i < 10; i++ {  
+        go func() {  
+            // 每个goroutine都做20次自增运算  
+            for i := 0; i < 20; i++ {  
+                time.Sleep(time.Millisecond)  
+                atomic.AddUint32(&cnt, 1)  
+            }  
+        }()  
+    }  
+  
+    // 等待2s, 等goroutine完成  
+    time.Sleep(time.Second * 2)  
+    // 取最终结果  
+    cntFinal := atomic.LoadUint32(&cnt)  
+  
+    fmt.Println("cnt:", cntFinal)  
+}  
+/* 
+output: 
+ 
+cnt: 200 
+*/ 
