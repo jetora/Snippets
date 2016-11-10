@@ -1,0 +1,56 @@
+利用channel在goroutins之间控制同步和传递数据
+发表回复
+在java等代码中，我们查询数据库的操作：
+sql = "select * from ....";
+result = db.query(sql)
+for(item in result)
+{
+.....
+}
+但是在go语言中，这么做就有些土了，我们可以利用channel天生的队列和线程同步的特性来实现。这也是go和其它语言很明显的思维区别。
+
+db的封装：
+
+package main
+
+var database *db
+
+type db struct {
+    req   chan string
+    res   chan interface{}
+}
+
+func init() {
+    database = NewDB()
+    go database.Run()
+}
+
+//处理查询请求，请req channel中的SQL取到，执行查询后结果放在res channel中
+func (d *db) Run() {
+    var s string
+
+    for {
+        s = <-d.req
+        d.res <- d.query(s)
+    }
+}
+
+func (d *db) query(sql string) interface{}{
+    //...
+}
+func NewDB() *db {
+    out := new(db)
+    out.req = make(chan string)
+    out.res = make(chan bool)
+    return out
+}
+调用时，将sql放入请求队列，并阻塞等待响应结果
+
+sql := "select * from ...";
+if database.req <- sql; res<-database.res {
+    //use res
+}
+这么做的好处：
+1、实现了同步获取结果，和直接一个线程里调用方法效果相似。
+2、调用和被调用在独立的协程里
+3、查询列表是一个先进先出的队列
