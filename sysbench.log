@@ -1,0 +1,43 @@
+https://github.com/akopytov/sysbench
+
+yum install automake libtool
+mkdir /usr/local/sysbench -p
+cd /usr/local/sysbench
+unzip sysbench-1.0.zip
+cd sysbench-1.0
+./autogen.sh
+./configure --with-mysql-includes=/usr/local/mysql/include --with-mysql-libs=/usr/local/mysql/lib
+make && make install
+export LD_LIBRARY_PATH=/usr/local/mysql/lib
+
+create database sbtest
+
+#以8线程并发创建16张50w数据的表
+sysbench --test=/usr/local/sysbench/sysbench-1.0/sysbench/tests/db/parallel_prepare.lua \
+         --mysql-table-engine=innodb --oltp-table-size=500000 --mysql-user=root \
+         --mysql-password='rootpass' --mysql-port=4306 --mysql-host=10.0.56.87 \
+         --oltp-tables-count=16 --num-threads=8 run
+
+还有另外一种方式，用oltp.lua脚本以串行方式准备数据
+sysbench --test=/usr/share/doc/sysbench/tests/db/oltp.lua --mysql-table-engine=innodb \
+         --oltp-table-size=500000 --mysql-user=user --mysql-password='passwd' \
+         --mysql-port=3306 --mysql-host=192.168.1.33 --oltp-tables-count=16 prepare
+
+真实测试场景中，数据表建议不低于10个，单表数据量不低于500万行，当然了，要视服务器硬件配置而定。如果是配备了SSD或者PCIE SSD这种高IOPS设备的话，则建议单表数据量最少不低于1亿行。
+
+sysbench --mysql-host=1.2.3.4. --mysql-port=3306 --mysql-user=tpcc \
+--mysql-password=tpcc --test=tests/db/oltp.lua --oltp_tables_count=10 \
+--oltp-table-size=10000000 --num-threads=8 --oltp-read-only=off \
+--report-interval=10 --rand-type=uniform --max-time=3600 \
+ --max-requests=0 --percentile=99 run >> ./log/sysbench_oltpX_8_20140921.log
+
+--num-threads=8 表示发起 8个并发连接
+--oltp-read-only=off 表示不要进行只读测试，也就是会采用读写混合模式测试
+--report-interval=10 表示每10秒输出一次测试进度报告
+--rand-type=uniform 表示随机类型为固定模式，其他几个可选随机模式：uniform(固定),gaussian(高斯),special(特定的),pareto(帕累托)
+--max-time=120 表示最大执行时长为 120秒
+--max-requests=0 表示总请求数为 0，因为上面已经定义了总执行时长，所以总请求数可以设定为 0；也可以只设定总请求数，不设定最大执行时长
+--percentile=99 表示设定采样比例，默认是 95%，即丢弃1%的长请求，在剩余的99%里取最大值
+
+即：模拟 对10个表并发OLTP测试，每个表1000万行记录，持续压测时间为 1小时。
+真实测试场景中，建议持续压测时长不小于30分钟，否则测试数据可能不具参考意义。

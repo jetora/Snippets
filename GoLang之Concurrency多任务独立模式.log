@@ -80,7 +80,7 @@ func addJobs(jobs chan<- Job, jobnames []string, results chan<- Result) {
 func doJobs(done chan<- struct{}, jobs <-chan Job) {  
   
     // 在channel中取出任务并计算  
-    for job := range jobs {  
+    for job := range jobs {  
   
         /* 
          * 定义类型自己的方法来处理业务逻辑, 实现框架和业务分离 

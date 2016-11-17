@@ -1,0 +1,54 @@
+1、即将删除的特性
+1.1、InnoDB monitoring features，详见：WL#7377（访问地址：http://dev.mysql.com/worklog/task/?id=7377，下面的其他WL，可以自行替换）
+【建议】可以动态修改 innodb_status_output、innodb_status_output_locks 两个参数的值打印相关信息，或者直接查看INFORMATION_SCHEMA下的相关表。
+1.2、old-password，4.1之前的就密码认证模式已经禁用，old_passwords参数不可用，WL#8006
+【建议】尽快升级旧密码串，同时升级MySQL版本，不要告诉我，你还在用4.1甚至更早的版本。
+
+1.3、部分SQL语法不可用
+1.3.1、ALTER TABLE … IGNORE。
+1.3.2、INSERT DELAY特性，但保留这个语法。WL#6073
+1.3.3、ERROR_FOR_DIVISION_BY_ZERO, NO_ZERO_DATE, NO_ZERO_IN_DATE SQL MODES 等几个SQL MODE合并到STRICT中。不过可能会导致replication失败，所以还在考虑中。WL#7467
+1.3.4、不再支持YEAR(2)，建议尽快升级成YEAR(4)。WL#6263
+【建议】尽可能使用标准SQL语法，不再使用MySQL特有的，或者不是那么严格要求的语法，避免以后版本升级遇到更多麻烦。
+
+1.4、一些参数不可用
+1.4.1、不再支持一些指令的简短写法，必须要求写全了，例如mysqldump –compr表示 mysqldump –compress，以后必须将整个参数写完整。WL#6978
+1.4.2、删除timed_mutexes。WL#7436
+1.4.3、不能再禁用InnoDB引擎，因为系统表也都改成InnoDB了。WL#7976
+1.4.4、性能提升有限，删除innodb_use_sys_malloc、innodb_additional_mem_pool_size。WL#7628
+1.4.5、意义不大，删除innodb_mirrored_log_groups。WL#6808
+1.4.6、已经有新的系统参数代替了，删除innodb_file_io_threads。WL#7149
+1.4.7、删除系统参数storage_engine，改用default_storage_engine。WL#7148
+1.4.8、删除mysql_upgrade中的–basedir和–datadir系统参数。WL#7010
+
+1.5、一些客户端工具
+mysqlaccess、mysql_convert_table_format、mysql_fix_extensions、mysql_find_rows.sh、mysql_setpermission、msql2mysql、mysqlbug、mysql_zap and mysql_waitpid、mysqlhotcopy将不再使用。
+
+2、预计取消的特性
+2.1、客户端交互协议中，EOF协议包不建议再使用了，建议改成OK协议包。WL#7766
+2.2、不建议使用SHOW PROFILE指令，或直接从INFORMATION_SCHEMA.PROFILING中查看，建议利用PERFORMANCE_SCHEMA中的几个视图查看。WL#6802
+2.2、基于DES算法的加解密函数不建议使用， 取而代之的是用基于AES的加解密函数。WL#8126
+2.4、同上，还不建议使用ENCODE()/DECODE()函数。WL#6984
+2.5、采用ALTER USER来为用户修改密码，不建议再使用SET PASSWORD修改密码。WL#6409
+2.6、和InnoDB相关的4个系统参数innodb_large_prefix、innodb_file_format、innodb_file_format_check、innodb_file_format_max不再建议使用。WL#7703
+2.7、不再建议在EXPLAIN后面加上EXTENDED/PARTITIONS关键字。WL#7027
+2.8、不再建议使用collation_database、character_set_database系统参数。WL#2.11
+2.9、不再建议使用sync_frm系统参数。WL#8216
+2.10、不再建议使用@@session.gtid_executed系统变量。WL#7518
+
+3、安全性
+3.1、用户表 mysql.user 的 plugin字段不允许为空， 默认值是 mysql_native_password，而不是 mysql_old_password，不再支持旧密码格式；
+3.2、增加密码过期机制，过期后需要修改密码，否则可能会被禁用，或者进入沙箱模式；
+3.3、使用 mysql_install_db 初始化时，默认会自动生成随机密码，并且不创建除 root@localhost 外的其他账号，也不创建 test 库；
+
+4、SQL MODE变化
+4.1、默认启用 STRICT_TRANS_TABLES 模式；
+4.2、对 ONLY_FULL_GROUP_BY 模式实现了更复杂的特性支持，并且也被默认启用；
+4.3、其他被默认启用的sql mode还有 NO_ENGINE_SUBSTITUTION；
+4.4、优化online操作，例如修改buffer pool、修改索引名（非主键）、修改REPLICATION FILTER、修改MASTER而无需关闭SLAVE线程 等众多特性。
+
+5、复制
+5.1、支持多源复制（Multi-source replication），这对采用分库分表的同学绝对是个超级重磅福音。可以把多个MASTER的数据归并到一个实例上， 有助于提高SLAVE服务器的利用率。不过如果是同一个表的话，会存在主键和唯一索引冲突的风险，需要提前做好规划。
+5.2、支持多线程复制（Multi-Threaded Slaves, 简称MTS），在5.6版本中实现了SCHEMA级别的并行复制，不过意义不大，因为我们线上大部分实例的读写压力基本集中在某几个数据表，基本无助于缓解复制延迟问题。
+MySQL 5.7 MTS支持两种模式，一种是和5.6一样，另一种则是基于binlog group commit实现的多线程复制，也就是MASTER上同时提交的binlog在SLAVE端也可以同时被apply，实现并行复制
+值得一提的是，经过对比测试，5.7采用新的并行复制后，仍然会存在一定程度的延迟，只不过相比5.6版本减少了86%，相比MariaDB的并行复制延迟也小不少
