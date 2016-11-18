@@ -25,8 +25,8 @@ sysbench --test=/usr/share/doc/sysbench/tests/db/oltp.lua --mysql-table-engine=i
 
 真实测试场景中，数据表建议不低于10个，单表数据量不低于500万行，当然了，要视服务器硬件配置而定。如果是配备了SSD或者PCIE SSD这种高IOPS设备的话，则建议单表数据量最少不低于1亿行。
 
-sysbench --mysql-host=1.2.3.4. --mysql-port=3306 --mysql-user=tpcc \
---mysql-password=tpcc --test=tests/db/oltp.lua --oltp_tables_count=10 \
+sysbench --mysql-host=10.0.56.87 --mysql-port=4306 --mysql-user=root \
+--mysql-password=rootpass --test=oltp.lua --oltp_tables_count=10 \
 --oltp-table-size=10000000 --num-threads=8 --oltp-read-only=off \
 --report-interval=10 --rand-type=uniform --max-time=3600 \
  --max-requests=0 --percentile=99 run >> ./log/sysbench_oltpX_8_20140921.log
@@ -41,3 +41,17 @@ sysbench --mysql-host=1.2.3.4. --mysql-port=3306 --mysql-user=tpcc \
 
 即：模拟 对10个表并发OLTP测试，每个表1000万行记录，持续压测时间为 1小时。
 真实测试场景中，建议持续压测时长不小于30分钟，否则测试数据可能不具参考意义。
+
+
+sysbench --test=oltp.lua --mysql-host=10.0.56.87 --mysql-port=4306 --mysql-db=sbtest --mysql-user=root --mysql-password=rootpass \
+--oltp-tables-count=8 --oltp-table-size=100000 --num-threads=10 --max-time=60 --report-interval=10 --oltp-read-only=off run
+
+sysbench --mysql-host=10.x.x.x --mysql-user=sbtest --mysql-password='sbtest' --mysql-db=sbetst \
+ --test=tests/db/oltp.lua --oltp_tables_count=10 --oltp-table-size=100000000 --oltp-read-only=off \
+ --oltp-test-mode=complex --rand-type=uniform --rand-init=on --num-threads=256 \
+ --max-time=3600 --max-requests=100000000 --report-interval=10 --percentile=99 run
+
+
+sysbench --test=/usr/share/doc/sysbench/tests/db/parallel_prepare.lua \
+--mysql-user=user --mysql-password='passwd' --mysql-port=3306 \
+--mysql-host=192.168.1.22 --oltp-tables-count=16 --num-threads=8 cleanup
