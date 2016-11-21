@@ -1,0 +1,6 @@
+mysqldump --user=%s  --password=%s  --host=%s --port=%s \
+--default-character-set=utf8 \
+--hex-blob \
+--opt --routines \
+--triggers --single-transaction \
+--master-data=2 --all-databases  |gzip >%s%s_%s_MySQL_%s.sql.gz
