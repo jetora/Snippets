@@ -4,3 +4,21 @@ mysqldump --user=%s  --password=%s  --host=%s --port=%s \
 --opt --routines \
 --triggers --single-transaction \
 --master-data=2 --all-databases  |gzip >%s%s_%s_MySQL_%s.sql.gz
+
+
+mysqldump -uroot -pvsa#dxgqodaphk4bzky2sgrUq_Lyvb jdcar s_product_shopgroup --where="id IN(3056,3053,3055,3052,3057,3054,3014,3015,3016,3029,3045,3037,3038,3030,3046,3032,3048,3040,3031,3039,3047,3033,3041,3025,3026,3042,3034,3028,3036,3044,3043,3027,3035,3062,3061,3060,3064,3065)" --no-create-info > s_product_shopgroup1125_deleted.sql
+
+
+update cgtablesubtable_archive set DeptId = 1870,updatedTime= now() where cgid =3964973;
+
+
+
+UPDATE cgfenpei SET num = 7, updatedTime=NOW() WHERE rfid = 18641335 and wareid = 2664283;
+UPDATE cgdetail SET numb = 7, updatedTime=NOW() WHERE cid = 18641335 and wid = 2664283;
+UPDATE cgtable SET zjiag = (SELECT sum(numb*jiage) FROM cgdetail WHERE cid=18641335) , UpdateTime=NOW()  WHERE yn=1 AND id=18641335;
+
+
+mysqldump -uroot -pvsa#dxgqodaphk4bzky2sgrUq_Lyvb procurement cgfenpei --where="rfid = 18641335 and wareid = 2664283" > cgfenpei1125_updated.sql
+mysqldump -uroot -pvsa#dxgqodaphk4bzky2sgrUq_Lyvb procurement cgdetail --where="cid = 18641335 and wid = 2664283" > cgdetail1125_updated.sql
+mysqldump -uroot -pvsa#dxgqodaphk4bzky2sgrUq_Lyvb procurement cgtable --where="yn=1 AND id=18641335" > cgtable1125_updated.sql
+
