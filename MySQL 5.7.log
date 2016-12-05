@@ -1,0 +1,161 @@
+yum -y install gcc gcc-c++ ncurses ncurses-devel cmake
+
+useradd -M -s /sbin/nologin mysql
+
+tar -xzf mysql-5.7.15.tar.gz
+tar -xzf mysql-boost-5.7.15.tar.gz
+
+mkdir -p /data/mysql
+cd mysql-5.7.15
+
+#从MySQL 5.7.5开始Boost库是必需的
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
+-DMYSQL_DATADIR=/data/mysql \
+-DDOWNLOAD_BOOST=1 \   
+-DWITH_BOOST=/usr/local/boost_1_59_0 \
+-DSYSCONFDIR=/etc \
+-DWITH_INNOBASE_STORAGE_ENGINE=1 \
+-DWITH_PARTITION_STORAGE_ENGINE=1 \
+-DWITH_FEDERATED_STORAGE_ENGINE=1 \
+-DWITH_BLACKHOLE_STORAGE_ENGINE=1 \
+-DWITH_MYISAM_STORAGE_ENGINE=1 \
+-DENABLED_LOCAL_INFILE=1 \
+-DENABLE_DTRACE=0 \
+-DDEFAULT_CHARSET=utf8mb4 \
+-DDEFAULT_COLLATION=utf8mb4_general_ci \
+-DWITH_EMBEDDED_SERVER=1
+
+yum install gcc gcc-c++ bzip2 bzip2-devel bzip2-libs python-devel -y
+
+
+cmake  -DCMAKE_INSTALL_PREFIX=/usr/local/mysql  -DMYSQL_DATADIR=/data/mysql -DSYSCONFDIR=/etc -DWITH_MYISAM_STORAGE_ENGINE=1  -DWITH_INNOBASE_STORAGE_ENGINE=1 -DWITH_MEMORY_STORAGE_ENGINE=1  -DWITH_READLINE=1  -DMYSQL_UNIX_ADDR=/tmp/mysql.sock -DMYSQL_TCP_PORT=3306  -DENABLED_LOCAL_INFILE=1  -DWITH_PARTITION_STORAGE_ENGINE=1  -DEXTRA_CHARSETS=all  -DDEFAULT_CHARSET=utf8  -DDEFAULT_COLLATION=utf8_general_ci
+
+wget https://cmake.org/files/v3.3/cmake-3.3.2.tar.gz
+wget http://ftp.gnu.org/gnu/bison/bison-3.0.4.tar.gz
+wget ftp://ftp.gnu.org/gnu/ncurses/ncurses-6.0.tar.gz
+wget http://jaist.dl.sourceforge.net/project/boost/boost/1.59.0/boost_1_59_0.tar.gz  #从MySQL 5.7.5开始Boost库是必需的
+wget http://cdn.mysql.com//Downloads/MySQL-5.7/mysql-5.7.9.tar.gz
+
+cmake . -DCMAKE_INSTALL_PREFIX=/export/servers/mysql/ \
+-DMYSQL_DATADIR=/export/data/mysql/data \
+-DSYSCONFDIR=/export/servers/mysql/etc \
+-DWITH_INNOBASE_STORAGE_ENGINE=1 \
+-DWITH_PERFSCHEMA_STORAGE_ENGINE=1\
+-DWITH_BLACKH0LE_ST0RAGE_ENGINE=1\
+-DDEFAULT_CHARSET=utf8 \
+-DDEFAULT_COLLATION=utf8_general_ci \
+-DMYSQL_UNIX_ADDR=/export/data/mysql/tmp/mysql.sock \
+-DENABLED_LOCAL_INFILE=ON \
+-DENABLED_PROFILING=ON \
+-DWITH_DEBUG=0 \
+-DMYSQL_TCP_PORT=3358 \
+-DDOWNLOAD_BOOST=1 -DWITH_BOOST=/usr/local/boost_1_59_0 
+
+ #不在线下载boost和指定boost路径
+
+chmod 664 my.cnf
+bin/mysqld --initialize --user=mysql --datadir=/export/data/mysql57 --basedir=/export/servers/mysql57  --explicit_defaults_for_timestamp
+
+/export/servers/mysql57/bin/mysqld_safe --defaults-file=/export/servers/mysql57/etc/my.cnf &
+
+
+set password = password('abcd')
+
+====================================================================================================================================================================================
+
+yum install -y cmake make gcc gcc-c++
+# 创建用户组
+groupadd mysql
+# 创建mysql用户，所属组为mysql
+useradd -s /sbin/nologin  -m -n  -g mysql mysql -d /usr/local/mysql
+安装MySQL相关依赖包
+yum install -y ncurses-devel openssl-devel bison-devel libaio libaio-devel
+
+boost库安装
+# 该步骤可以省略，在cmake阶段添加参数-DDOWNLOAD_BOOST=1 -DWITH_BOOST=/usr/local/boost即可
+# boost库安装
+wget http://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz
+tar -zxvf boost_1_59_0.tar.gz -C /usr/local
+mv /usr/local/boost_1_59_0 /usr/local/boost
+cd /usr/local/boost
+./bootstrap.sh
+./b2 stage threading=multi link=shared
+./b2 install threading=multi link=shared
+
+创建MySQL相关目录及权限
+mkdir -p /data/mysql/mysql3306/{data,log,tmp}
+chown -R mysql:mysql /data/mysql/mysql3306
+
+开始编译
+# 切换到mysql-5.7.16源码目录下
+cd /path/mysql-5.7.16
+ # cmake
+ cmake \
+-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+-DCMAKE_INSTALL_PREFIX=/usr/local/mysql \
+-DMYSQL_DATADIR=/data/mysql/mysql3306/data \
+-DSYSCONFDIR=/etc/my.cnf \
+-DWITH_PARTITION_STORAGE_ENGINE=1  \
+-DENABLE_DEBUG_SYNC=0  \
+-DENABLED_LOCAL_INFILE=1 \
+-DENABLED_PROFILING=1  \
+-DWITH_DEBUG=0  \
+-DWITH_SSL=yes \
+-DWITH_SAFEMALLOC=OFF \
+-DDOWNLOAD_BOOST=1 \
+-DWITH_BOOST=/usr/local/boost
+
+# make 
+# 该命令中可以通过添加-j参数指定多线程工作，如make -j2 && make install -j2 则使用2个CPU核进行make
+
+# 该步骤执行完毕后，可以到CMAKE_INSTALL_PREFIX参数指定的目录下，即MySQL安装目录下查看到mysql相关目录与文件
+make && make install
+# 修改MySQL安装目录的所属用户与用户组为mysql:mysql
+chown -R mysql:mysql /usr/local/mysql  
+
+添加MySQL环境变量
+vim /etc/profile
+
+# 在~/.bashrc文件下添加如下语句
+   export MYSQL_HOME=/usr/local/mysql
+   export PATH=${MYSQL_HOME}/bin:$PATH
+
+# 保存后，使环境变量生效
+  source /etc/profile
+
+初始化及启动
+配置文件放置到： /etc/my.cnf  (加入QQ群：529671799 获取）
+cd /usr/local/mysql
+#初始化
+./bin/mysqld --initialize
+
+#获取初始化的密码：
+cat /data/mysql/mysql3306/data/error.log |grep password
+利用这个password 登录MySQL
+
+#启动MySQL
+/usr/local/mysql/bin/mysqld_safe --defaults-file=/etc/my.cnf &
+
+#登录MySQL后修改密码
+mysql>set password='wubxwubx';  
+
+
+登陆MySQL
+mysql -uroot -p
+#输入更改后的密码： wubxuwbx
+
+关闭MySQL
+
+mysqladmin shutdown -uroot -S /tmp/myql3306.sock
+# 使用新密码
+
+总结：
+初始化的MySQL 5.7.6+与MySQL 5.6.xx不同之处
+初始化工具不同
+MySQL 5.6.xx使用的是mysql_install_db，MySQL 5.7.6+官方推荐使用mysqld --initialize。
+初始化数据库不同
+MySQL 5.6.xx初始化之后存在mysql,information_schema,performance_schema,test四个数据库，MySQL 5.7.6+初始化之后存在mysql,information_schema,performance_schema,sys四个数据库。
+初始化用户不同
+MySQL 5.6.xx初始化之后存在root@localhost,root@'::1',root@'hostname',''@'localhost',''@'hostname'五个用户，MySQL 5.7.6+初始化之后存在mysql.sys,root@localhost用户
+初始化root密码
+MySQL5.6.xx初始化之后root用户密码为空，MySQL 5.7.6+初始化之后会为root@localhost用户生成随机密码。
