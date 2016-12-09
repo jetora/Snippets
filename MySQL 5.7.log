@@ -51,12 +51,13 @@ cmake . -DCMAKE_INSTALL_PREFIX=/export/servers/mysql/ \
 -DMYSQL_TCP_PORT=3358 \
 -DDOWNLOAD_BOOST=1 -DWITH_BOOST=/usr/local/boost_1_59_0 
 
+
  #不在线下载boost和指定boost路径
 
 chmod 664 my.cnf
-bin/mysqld --initialize --user=mysql --datadir=/export/data/mysql57 --basedir=/export/servers/mysql57  --explicit_defaults_for_timestamp
-
-/export/servers/mysql57/bin/mysqld_safe --defaults-file=/export/servers/mysql57/etc/my.cnf &
+bin/mysqld --initialize --user=mysql --datadir=/export/data/mysql/data --basedir=/export/servers/mysql  --explicit_defaults_for_timestamp
+bin/mysqld --initialize --user=mysql --datadir=/export/data/mysql/data --basedir=/export/servers/mysql  --explicit_defaults_for_timestamp
+/export/servers/mysql/bin/mysqld_safe --defaults-file=/export/servers/mysql/etc/my.cnf &
 
 
 set password = password('abcd')
@@ -137,7 +138,7 @@ cat /data/mysql/mysql3306/data/error.log |grep password
 /usr/local/mysql/bin/mysqld_safe --defaults-file=/etc/my.cnf &
 
 #登录MySQL后修改密码
-mysql>set password='wubxwubx';  
+mysql>set password='rootpass';  
 
 
 登陆MySQL
@@ -159,3 +160,29 @@ MySQL 5.6.xx初始化之后存在mysql,information_schema,performance_schema,tes
 MySQL 5.6.xx初始化之后存在root@localhost,root@'::1',root@'hostname',''@'localhost',''@'hostname'五个用户，MySQL 5.7.6+初始化之后存在mysql.sys,root@localhost用户
 初始化root密码
 MySQL5.6.xx初始化之后root用户密码为空，MySQL 5.7.6+初始化之后会为root@localhost用户生成随机密码。
+
+=====================================================源码调试===================================================================================================
+debug:
+cmake . -DCMAKE_INSTALL_PREFIX=/usr/local/mysql-3306 \
+-DMYSQL_DATADIR=/usr/local/mysql-3306/data  \
+-DSYSCONFDIR=/usr/local/mysql-3306/etc \
+-DWITH_MYISAM_STORAGE_ENGINE=1 \
+-DWITH_INNOBASE_STORAGE_ENGINE=1 \ 
+-DWITH_MEMORY_STORAGE_ENGINE=1 \
+-DWITH_READLINE=1 \
+-DMYSQL_UNIX_ADDR=/usr/local/mysql-3306/mysql-3306.sock \
+-DMYSQL_TCP_PORT=3306 \
+-DENABLED_LOCAL_INFILE=1 \
+-DWITH_PARTITION_STORAGE_ENGINE=1 \
+-DEXTRA_CHARSETS=all \
+-DDEFAULT_CHARSET=utf8 \
+-DDEFAULT_COLLATION=utf8_general_ci \
+-DWITH_BOOST=/usr/local/boost_1_59_0 -DWITH_DEBUG=1
+
+
+
+
+
+
+
+
